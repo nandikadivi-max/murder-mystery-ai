@@ -1,6 +1,11 @@
-require("dotenv").config();
-const express = require("express");
 const path = require("path");
+// Load env from CWD first (common in deploy setups), then fall back to project root.
+require("dotenv").config();
+require("dotenv").config({
+  path: path.resolve(__dirname, "..", ".env"),
+  override: false,
+});
+const express = require("express");
 const { createSession, getSession, getSuspect, recordTurn, getHint, resolveAccusation, CASES } = require("./gameEngine");
 const { generateSuspectReply, synthesizeSpeech } = require("./ai");
 
