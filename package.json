@@ -1,0 +1,16 @@
+{
+  "name": "blackwood-manor",
+  "version": "0.1.0",
+  "description": "A voice-based AI murder-mystery interrogation game.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "uuid": "^9.0.1"
+  }
+}

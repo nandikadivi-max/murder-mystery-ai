@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Murder Mystery AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0d0b08;--parchment:#d9cba8;--dim:#9c9079;--blood:#7c1f1f;--blood-b:#a83232;--brass:#b08d3f;--candle:#e8c168;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cormorant Garamond',serif;background:radial-gradient(ellipse at 50% 0%,#1a140d 0%,#0d0b08 55%,#060504 100%);color:var(--parchment);min-height:100vh;overflow-x:hidden;}
+body::after{content:"";position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;mix-blend-mode:overlay;}
+.vignette{position:fixed;inset:0;pointer-events:none;z-index:1;box-shadow:inset 0 0 220px 80px rgba(0,0,0,0.85);}
+
+/* HEADER */
+header{text-align:center;padding:1.8rem 1.2rem .8rem;position:relative;z-index:2;}
+header .kicker{font-family:'Special Elite',monospace;letter-spacing:.4em;text-transform:uppercase;font-size:.65rem;color:var(--brass);margin-bottom:.5rem;}
+header h1{font-size:clamp(1.8rem,5vw,3.2rem);font-weight:600;font-style:italic;color:var(--parchment);}
+header h1 .accent{color:var(--blood-b);}
+.rule{width:80px;height:1px;margin:.7rem auto 0;background:linear-gradient(90deg,transparent,var(--brass),transparent);}
+main{max-width:1100px;margin:0 auto;padding:1rem 1.2rem 5rem;position:relative;z-index:2;}
+
+/* BUTTONS */
+button{font-family:'Special Elite',monospace;letter-spacing:.1em;text-transform:uppercase;font-size:.66rem;padding:.7rem 1.1rem;cursor:pointer;background:transparent;color:var(--parchment);border:1px solid var(--brass);transition:all .2s;}
+button:hover{background:var(--brass);color:var(--ink);}
+button:disabled{opacity:.35;cursor:not-allowed;}
+.btn-blood{border-color:var(--blood-b);color:var(--blood-b);}
+.btn-blood:hover{background:var(--blood);color:var(--parchment);border-color:var(--blood);}
+.btn-sm{padding:.45rem .85rem;font-size:.6rem;}
+.btn-ghost{border-color:rgba(176,141,63,.35);color:var(--dim);}
+.btn-ghost:hover{background:rgba(176,141,63,.1);color:var(--candle);border-color:var(--brass);}
+.mic-btn{border-color:var(--blood-b);color:var(--blood-b);}
+.mic-btn.recording{background:var(--blood);color:var(--parchment);animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(168,50,50,.5)}50%{box-shadow:0 0 0 10px rgba(168,50,50,0)}}
+
+/* INPUT */
+.ask-input{background:rgba(0,0,0,.4);border:1px solid rgba(176,141,63,.3);color:var(--parchment);padding:.72rem .85rem;font-family:'Cormorant Garamond',serif;font-size:.98rem;outline:none;}
+.ask-input:focus{border-color:var(--brass);}
+.ask-input::placeholder{color:var(--dim);font-style:italic;}
+
+/* CASE PICKER */
+.diff-section{margin-bottom:1.8rem;}
+.diff-header{display:flex;align-items:center;gap:.8rem;margin-bottom:.8rem;}
+.diff-label{font-family:'Special Elite',monospace;font-size:.68rem;letter-spacing:.25em;text-transform:uppercase;padding:.3rem .75rem;border-left:3px solid;display:inline-block;}
+.diff-label.easy{color:#4a7;border-color:#4a7;}
+.diff-label.medium{color:var(--candle);border-color:var(--brass);}
+.diff-label.hard{color:var(--blood-b);border-color:var(--blood-b);}
+.diff-desc{font-size:.85rem;color:var(--dim);font-style:italic;}
+.case-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:.85rem;}
+.case-card{border:1px solid rgba(176,141,63,.25);background:linear-gradient(155deg,rgba(28,22,14,.92),rgba(12,10,6,.96));padding:1.3rem 1.1rem;cursor:pointer;transition:all .28s;position:relative;overflow:hidden;}
+.case-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--brass),transparent);opacity:0;transition:opacity .28s;}
+.case-card:hover{transform:translateY(-4px);border-color:var(--brass);}
+.case-card:hover::before{opacity:1;}
+.case-card .emoji{font-size:1.7rem;margin-bottom:.55rem;display:block;}
+.case-card h3{font-size:1.22rem;font-style:italic;margin-bottom:.3rem;}
+.case-card p{font-size:.87rem;color:var(--dim);line-height:1.32;}
+.case-card .meta{margin-top:.6rem;font-family:'Special Elite',monospace;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);}
+
+/* SCORE HISTORY */
+.history-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;padding:.6rem .9rem;border:1px solid rgba(176,141,63,.18);background:rgba(10,8,5,.5);}
+.history-bar span{font-family:'Special Elite',monospace;font-size:.62rem;letter-spacing:.12em;color:var(--dim);}
+.history-bar .best{color:var(--candle);}
+
+/* INTRO OVERLAY */
+#introOverlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:1.5rem;background:rgba(3,2,1,.96);backdrop-filter:blur(8px);}
+#introOverlay.show{display:flex;}
+.intro-box{max-width:620px;width:100%;}
+.intro-box .case-emoji{font-size:2.6rem;margin-bottom:.8rem;display:block;text-align:center;}
+.intro-box h2{font-size:1.7rem;font-style:italic;text-align:center;margin-bottom:.3rem;}
+.diff-badge{font-family:'Special Elite',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;padding:.28rem .7rem;border:1px solid;display:inline-block;margin-bottom:1rem;}
+.diff-badge.easy{color:#4a7;border-color:#4a7;}
+.diff-badge.medium{color:var(--candle);border-color:var(--brass);}
+.diff-badge.hard{color:var(--blood-b);border-color:var(--blood-b);}
+.intro-center{text-align:center;}
+.intro-premise{font-size:1.05rem;line-height:1.62;color:var(--dim);font-style:italic;margin-bottom:1.1rem;text-align:left;padding:.9rem;border-left:2px solid rgba(176,141,63,.3);background:rgba(0,0,0,.2);}
+.narration-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;font-size:.88rem;color:var(--dim);}
+.narration-row #narrationStatus{font-family:'Special Elite',monospace;font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;}
+.narration-btn{font-size:.58rem;padding:.35rem .7rem;}
+.clue-toggle-row{display:flex;align-items:center;gap:.5rem;margin-bottom:1.1rem;font-size:.9rem;color:var(--dim);}
+.clue-toggle-row input{width:15px;height:15px;cursor:pointer;accent-color:var(--brass);}
+.intro-btns{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;}
+
+/* GAME */
+#gameArea{display:none;}
+.game-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;flex-wrap:wrap;gap:.4rem;}
+.game-left{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;}
+.game-title-sm{font-style:italic;color:var(--dim);font-size:.95rem;}
+.stat-chips{display:flex;gap:.4rem;flex-wrap:wrap;}
+.chip{font-family:'Special Elite',monospace;font-size:.58rem;letter-spacing:.1em;padding:.3rem .6rem;border:1px solid rgba(176,141,63,.28);color:var(--brass);}
+
+/* CASE BRIEF (collapsible) */
+.case-brief-wrap{margin-bottom:.9rem;border:1px solid rgba(176,141,63,.2);background:rgba(8,6,3,.6);}
+.case-brief-toggle{width:100%;text-align:left;padding:.6rem .9rem;font-family:'Special Elite',monospace;font-size:.62rem;letter-spacing:.2em;color:var(--brass);border:none;background:transparent;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.case-brief-toggle:hover{background:rgba(176,141,63,.06);color:var(--candle);}
+.case-brief-body{display:none;padding:.7rem .9rem .8rem;border-top:1px solid rgba(176,141,63,.15);}
+.case-brief-body.open{display:block;}
+.brief-premise{font-style:italic;color:var(--dim);font-size:.95rem;line-height:1.5;margin-bottom:.6rem;}
+.brief-facts{list-style:none;}
+.brief-facts li{font-size:.88rem;color:var(--dim);padding:.22rem 0;padding-left:.9rem;position:relative;line-height:1.35;}
+.brief-facts li::before{content:"–";position:absolute;left:0;color:var(--brass);}
+
+/* SUSPECTS */
+.suspects{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:.7rem;margin-bottom:1rem;}
+.suspect-card{border:1px solid rgba(176,141,63,.25);background:linear-gradient(155deg,rgba(28,22,14,.9),rgba(12,10,6,.95));padding:.9rem .85rem;cursor:pointer;transition:all .28s;position:relative;overflow:hidden;}
+.suspect-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--brass),transparent);opacity:0;transition:opacity .28s;}
+.suspect-card:hover{transform:translateY(-3px);border-color:var(--brass);}
+.suspect-card:hover::before{opacity:1;}
+.suspect-card.active{border-color:var(--blood-b);box-shadow:0 0 18px rgba(168,50,50,.15);}
+.suspect-card.active::before{opacity:1;background:linear-gradient(90deg,transparent,var(--blood-b),transparent);}
+.suspect-card .num{font-family:'Special Elite',monospace;font-size:.58rem;color:var(--brass);letter-spacing:.12em;}
+.suspect-card h3{font-size:1.12rem;font-weight:600;margin:.2rem 0 .15rem;font-style:italic;}
+.suspect-card p{font-size:.83rem;color:var(--dim);line-height:1.28;}
+/* suspicion meter */
+.sus-meter{margin-top:.5rem;height:2px;background:rgba(176,141,63,.12);position:relative;}
+.sus-fill{height:100%;background:linear-gradient(90deg,var(--blood-b),var(--candle));transition:width .5s ease;}
+.talking-dot{margin-top:.35rem;font-family:'Special Elite',monospace;font-size:.55rem;letter-spacing:.12em;color:var(--candle);text-transform:uppercase;opacity:0;transition:opacity .3s;}
+.suspect-card.talking .talking-dot{opacity:1;animation:flick 1.4s infinite;}
+@keyframes flick{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* GAME BODY */
+.game-body{display:grid;grid-template-columns:1fr 270px;gap:.9rem;}
+@media(max-width:700px){.game-body{grid-template-columns:1fr;}}
+
+/* PANEL */
+.panel{border:1px solid rgba(176,141,63,.25);background:rgba(8,6,3,.7);backdrop-filter:blur(4px);padding:1.2rem;display:flex;flex-direction:column;}
+.panel .who{font-family:'Special Elite',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);margin-bottom:.7rem;}
+.transcript{flex:1;overflow-y:auto;max-height:280px;padding-right:.3rem;}
+.transcript::-webkit-scrollbar{width:2px;}
+.transcript::-webkit-scrollbar-thumb{background:rgba(176,141,63,.3);}
+.line{margin-bottom:.85rem;line-height:1.48;}
+.lbl{font-family:'Special Elite',monospace;font-size:.56rem;letter-spacing:.16em;text-transform:uppercase;display:block;margin-bottom:.12rem;}
+.line.detective .lbl{color:var(--brass);}
+.line.suspect .lbl{color:var(--blood-b);}
+.line.suspect p{font-style:italic;font-size:1rem;}
+.thinking{color:var(--dim);font-style:italic;font-size:.95rem;}
+
+/* STARTER QUESTIONS */
+.starter-qs{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.7rem;}
+.starter-q{font-family:'Cormorant Garamond',serif;font-size:.82rem;padding:.32rem .65rem;border:1px solid rgba(176,141,63,.28);color:var(--dim);background:rgba(0,0,0,.25);cursor:pointer;transition:all .18s;font-style:italic;text-transform:none;letter-spacing:0;}
+.starter-q:hover{border-color:var(--brass);color:var(--parchment);background:rgba(176,141,63,.08);}
+
+/* CONTROLS */
+.controls{display:flex;gap:.55rem;margin-top:.85rem;align-items:center;flex-wrap:wrap;}
+.controls .ask-input{flex:1;min-width:150px;}
+
+/* CLUE NOTEBOOK */
+.notebook{border:1px solid rgba(176,141,63,.25);background:rgba(8,6,3,.7);padding:.9rem;display:flex;flex-direction:column;}
+.notebook h4{font-family:'Special Elite',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);margin-bottom:.6rem;flex-shrink:0;}
+.clue-scroll{overflow-y:auto;height:280px;}
+.clue-scroll::-webkit-scrollbar{width:2px;}
+.clue-scroll::-webkit-scrollbar-thumb{background:rgba(176,141,63,.3);}
+.clue-list{list-style:none;}
+.clue-list li{font-size:.86rem;color:var(--dim);line-height:1.32;padding:.4rem 0;border-bottom:1px solid rgba(176,141,63,.08);animation:fadeIn .35s ease;}
+.clue-list li:last-child{border-bottom:none;}
+.clue-who{font-family:'Special Elite',monospace;font-size:.55rem;letter-spacing:.1em;color:var(--blood-b);display:block;margin-bottom:.12rem;}
+.no-clue{color:var(--dim);font-style:italic;font-size:.86rem;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* BOTTOM BAR */
+.bottom-bar{display:flex;gap:.55rem;justify-content:center;align-items:center;margin-top:1.2rem;padding-top:1.1rem;border-top:1px solid rgba(176,141,63,.18);flex-wrap:wrap;}
+.hint-group{display:flex;align-items:center;gap:.4rem;}
+.hint-left{font-family:'Special Elite',monospace;font-size:.6rem;color:var(--dim);}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:1.2rem;background:rgba(3,2,1,.9);backdrop-filter:blur(6px);}
+.overlay.show{display:flex;}
+.modal{max-width:520px;width:100%;border:1px solid var(--brass);background:linear-gradient(160deg,#1a140d,#0a0805);padding:1.8rem;text-align:center;}
+.modal h2{font-size:1.6rem;font-style:italic;margin-bottom:.6rem;}
+.modal p{color:var(--dim);line-height:1.58;margin-bottom:.55rem;font-size:.96rem;}
+.accuse-options{display:flex;flex-direction:column;gap:.42rem;margin:.9rem 0;}
+.accuse-options button{width:100%;}
+.verdict-correct{color:var(--candle);}
+.verdict-wrong{color:var(--blood-b);}
+
+/* VERDICT DETAIL */
+.verdict-body{text-align:left;margin:.7rem 0;padding:.85rem;border:1px solid rgba(176,141,63,.2);background:rgba(0,0,0,.3);}
+.verdict-body p{margin-bottom:.32rem;font-size:.92rem;line-height:1.45;}
+.verdict-body strong{color:var(--candle);}
+.score-box{text-align:center;padding:.9rem;margin:.7rem 0;border:1px solid rgba(176,141,63,.3);background:rgba(176,141,63,.06);}
+.score-num{font-family:'Special Elite',monospace;font-size:2.2rem;color:var(--candle);letter-spacing:.05em;}
+.score-label{font-family:'Special Elite',monospace;font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-top:.3rem;}
+.score-stars{font-size:1.3rem;margin-top:.4rem;}
+.modal-btns{display:flex;gap:.5rem;justify-content:center;margin-top:.9rem;flex-wrap:wrap;}
+
+/* HINT TOAST */
+#hintToast{position:fixed;bottom:1.8rem;left:50%;transform:translateX(-50%);z-index:200;background:linear-gradient(135deg,#1a140d,#0d0b08);border:1px solid var(--brass);padding:.9rem 1.2rem;max-width:460px;width:90%;display:none;animation:slideUp .28s ease;}
+#hintToast.show{display:block;}
+@keyframes slideUp{from{transform:translateX(-50%) translateY(18px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.ht-label{font-family:'Special Elite',monospace;font-size:.58rem;letter-spacing:.18em;color:var(--brass);text-transform:uppercase;margin-bottom:.35rem;}
+.ht-text{font-style:italic;color:var(--parchment);line-height:1.4;font-size:.96rem;}
+.ht-close{position:absolute;top:.45rem;right:.65rem;cursor:pointer;color:var(--dim);font-size:.75rem;background:none;border:none;padding:.2rem;}
+
+.loading{text-align:center;padding:2.5rem;color:var(--dim);font-style:italic;}
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<header>
+  <div class="kicker">AI · Murder · Mystery</div>
+  <h1>Murder <span class="accent">Mystery</span> AI</h1>
+  <div class="rule"></div>
+</header>
+
+<main>
+  <!-- CASE PICKER -->
+  <div id="casePicker">
+    <div id="historyBar" style="display:none;" class="history-bar">
+      <span>Your best scores</span>
+      <span class="best" id="historyText"></span>
+    </div>
+    <div id="casePickerInner"><div class="loading">Loading cases…</div></div>
+  </div>
+
+  <!-- GAME AREA -->
+  <div id="gameArea">
+    <div class="game-topbar">
+      <div class="game-left">
+        <span class="game-title-sm" id="gameTitle"></span>
+        <div class="stat-chips">
+          <div class="chip" id="qCount">0 questions</div>
+          <div class="chip" id="timerChip">0:00</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.4rem;">
+        <button class="btn-sm btn-ghost" id="resetBtn">↩ New Case</button>
+      </div>
+    </div>
+
+    <!-- CASE BRIEF (collapsible) -->
+    <div class="case-brief-wrap">
+      <button class="case-brief-toggle" id="briefToggle">
+        <span>📋 Case Brief</span><span id="briefArrow">▼</span>
+      </button>
+      <div class="case-brief-body" id="briefBody">
+        <p class="brief-premise" id="briefPremise"></p>
+        <ul class="brief-facts" id="briefFacts"></ul>
+      </div>
+    </div>
+
+    <div class="suspects" id="suspects"></div>
+
+    <div class="game-body" id="gameBody">
+      <div class="panel">
+        <div class="who" id="who">Pick a suspect to question</div>
+        <div class="transcript" id="transcript">
+          <p class="thinking">Choose a suspect above to start the interrogation.</p>
+        </div>
+        <div class="starter-qs" id="starterQs" style="display:none;"></div>
+        <div class="controls">
+          <input class="ask-input" id="askInput" placeholder="Ask them something…" disabled/>
+          <button class="mic-btn btn-sm" id="micBtn" disabled>🎤</button>
+          <button id="askBtn" disabled>Ask</button>
+        </div>
+      </div>
+
+      <div class="notebook" id="notebook" style="display:none;">
+        <h4>📋 Clue Notebook</h4>
+        <div class="clue-scroll">
+          <ul class="clue-list" id="clueList"><li class="no-clue">No clues yet.</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="hint-group">
+        <button id="hintBtn" class="btn-sm">💡 Hint</button>
+        <span class="hint-left" id="hintLeft">3 left</span>
+      </div>
+      <button class="btn-blood" id="accuseBtn">⚖ Accuse Someone</button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading" style="display:none;">Setting up the case…</div>
+</main>
+
+<!-- INTRO OVERLAY -->
+<div id="introOverlay">
+  <div class="intro-box">
+    <span class="case-emoji" id="introEmoji"></span>
+    <h2 id="introTitle"></h2>
+    <div class="intro-center"><div class="diff-badge" id="introDiff"></div></div>
+    <p class="intro-premise" id="introPremise">Loading case details…</p>
+    <div class="narration-row">
+      <span id="narrationStatus">🎙 Narrating…</span>
+      <button class="btn-sm narration-btn btn-ghost" id="stopNarBtn">Stop narration</button>
+    </div>
+    <div class="clue-toggle-row">
+      <input type="checkbox" id="clueToggle" checked/>
+      <label for="clueToggle">Show Clue Notebook during investigation</label>
+    </div>
+    <div class="intro-btns">
+      <button id="startBtn">Start Investigation →</button>
+    </div>
+  </div>
+</div>
+
+<!-- HINT TOAST -->
+<div id="hintToast">
+  <button class="ht-close" id="hintClose">✕</button>
+  <div class="ht-label">💡 Hint</div>
+  <div class="ht-text" id="hintText"></div>
+</div>
+
+<!-- ACCUSE MODAL -->
+<div class="overlay" id="accuseOverlay">
+  <div class="modal">
+    <h2>Who did it?</h2>
+    <p>Choose who you think is the killer. Add a motive if you know it.</p>
+    <div class="accuse-options" id="accuseOptions"></div>
+    <input class="ask-input" id="motiveInput" placeholder="Their motive? (optional)" style="width:100%;margin-bottom:.75rem;"/>
+    <button id="cancelAccuse">Go back</button>
+  </div>
+</div>
+
+<!-- VERDICT MODAL -->
+<div class="overlay" id="verdictOverlay">
+  <div class="modal">
+    <h2 id="verdictTitle"></h2>
+    <div class="score-box" id="scoreBox" style="display:none;">
+      <div class="score-stars" id="scoreStars"></div>
+      <div class="score-num" id="scoreNum"></div>
+      <div class="score-label" id="scoreLabel"></div>
+    </div>
+    <div class="verdict-body" id="verdictDetail"></div>
+    <div class="modal-btns">
+      <button id="playAgainBtn">Play again</button>
+      <button class="btn-blood" id="newCaseBtn">Try different case</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let state = {
+  sessionId: null, suspects: [], active: null,
+  questionsAsked: 0, hintsUsed: 0,
+  difficulty: 'medium', showClues: true,
+  startTime: null, timerInterval: null,
+  publicFacts: [],
+};
+let transcripts = {};       // { suspectId: html }
+let suspectTurns = {};      // { suspectId: count } — local tracking for suspicion meter
+let pendingCaseId = null;
+let pendingCaseMeta = null;
+let preloadedSession = null;
+const audio = new Audio();
+const narAudio = new Audio();
+
+// ── SCORE CALCULATION ──
+function calcScore(difficulty, questions, hints, fullSolve) {
+  const base = { easy: 800, medium: 1300, hard: 2000 }[difficulty] || 1000;
+  const qPen = { easy: 30, medium: 20, hard: 12 }[difficulty] || 20;
+  const raw = base - (questions * qPen) - (hints * 150) + (fullSolve ? 300 : 0);
+  return Math.max(50, Math.round(raw / 10) * 10);
+}
+
+function getRating(score, difficulty) {
+  const t = {
+    easy:   [[720,'⭐⭐⭐','Master Detective'],[450,'⭐⭐','Sharp Detective'],[0,'⭐','Case Closed']],
+    medium: [[1050,'⭐⭐⭐','Master Detective'],[650,'⭐⭐','Sharp Detective'],[0,'⭐','Case Closed']],
+    hard:   [[1600,'⭐⭐⭐','Master Detective'],[1000,'⭐⭐','Sharp Detective'],[0,'⭐','Case Closed']],
+  }[difficulty] || t.medium;
+  for (const [min, stars, label] of t) if (score >= min) return { stars, label };
+  return { stars:'⭐', label:'Case Closed' };
+}
+
+// ── SCORE HISTORY ──
+function saveScore(caseId, score, difficulty) {
+  const key = 'mmHistory';
+  const hist = JSON.parse(localStorage.getItem(key) || '{}');
+  if (!hist[caseId] || score > hist[caseId].score) hist[caseId] = { score, difficulty };
+  localStorage.setItem(key, JSON.stringify(hist));
+}
+function loadHistory() {
+  try {
+    const hist = JSON.parse(localStorage.getItem('mmHistory') || '{}');
+    const entries = Object.values(hist);
+    if (!entries.length) return;
+    const best = entries.reduce((a,b) => b.score > a.score ? b : a, entries[0]);
+    document.getElementById('historyBar').style.display = 'flex';
+    document.getElementById('historyText').textContent = `Best: ${best.score} pts (${best.difficulty})`;
+  } catch(e) {}
+}
+
+// ── CASE PICKER ──
+async function loadCases() {
+  loadHistory();
+  const res = await fetch('/api/cases');
+  const cases = await res.json();
+  const byDiff = { easy:[], medium:[], hard:[] };
+  cases.forEach(c => byDiff[c.difficulty].push(c));
+  const descs = {
+    easy: 'Fewer suspects, clearer clues. Good starting point.',
+    medium: 'Balanced challenge. Suspects have real secrets.',
+    hard: 'Complex alibis, many red herrings. For sharp detectives.',
+  };
+  const labels = { easy:'🟢 Easy', medium:'🟡 Medium', hard:'🔴 Hard' };
+  const inner = document.getElementById('casePickerInner');
+  inner.innerHTML = '';
+  ['easy','medium','hard'].forEach(diff => {
+    const sec = document.createElement('div');
+    sec.className = 'diff-section';
+    sec.innerHTML = `<div class="diff-header"><div class="diff-label ${diff}">${labels[diff]}</div><span class="diff-desc">${descs[diff]}</span></div>`;
+    const grid = document.createElement('div'); grid.className = 'case-grid';
+    byDiff[diff].forEach(c => {
+      const card = document.createElement('div'); card.className = 'case-card';
+      card.innerHTML = `<span class="emoji">${c.emoji}</span><h3>${c.title}</h3><p>${c.setting}</p><div class="meta">${c.suspectCount} suspects</div>`;
+      card.onclick = () => showIntro(c);
+      grid.appendChild(card);
+    });
+    sec.appendChild(grid); inner.appendChild(sec);
+  });
+}
+
+// ── INTRO ──
+function showIntro(caseMeta) {
+  pendingCaseId = caseMeta.id;
+  pendingCaseMeta = caseMeta;
+  preloadedSession = null;
+
+  document.getElementById('introEmoji').textContent = caseMeta.emoji;
+  document.getElementById('introTitle').textContent = caseMeta.title;
+  const badge = document.getElementById('introDiff');
+  badge.textContent = caseMeta.difficulty.toUpperCase();
+  badge.className = 'diff-badge ' + caseMeta.difficulty;
+  document.getElementById('introPremise').textContent = 'Loading…';
+  document.getElementById('narrationStatus').textContent = '🎙 Loading narration…';
+  document.getElementById('introOverlay').classList.add('show');
+
+  loadSessionAndNarrate(caseMeta.id);
+}
+
+async function loadSessionAndNarrate(caseId) {
+  // Load session
+  const res = await fetch('/api/session', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ caseId })
+  });
+  preloadedSession = await res.json();
+  document.getElementById('introPremise').textContent = preloadedSession.premise;
+
+  // Narrate with ElevenLabs
+  const narText = `Case file: ${preloadedSession.title}. ${preloadedSession.premise} You have ${preloadedSession.suspects.length} suspects to question. Good luck, detective.`;
+  narrateElevenLabs(narText);
+}
+
+async function narrateElevenLabs(text) {
+  document.getElementById('narrationStatus').textContent = '🎙 Narrating…';
+  try {
+    const res = await fetch('/api/narrate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ text })
+    });
+    if (!res.ok) throw new Error('narrate failed');
+    const blob = await res.blob();
+    narAudio.src = URL.createObjectURL(blob);
+    narAudio.onended = () => document.getElementById('narrationStatus').textContent = '✓ Done';
+    narAudio.play().catch(() => {});
+    document.getElementById('narrationStatus').textContent = '🔊 Playing…';
+  } catch(e) {
+    document.getElementById('narrationStatus').textContent = '(narration unavailable)';
+  }
+}
+
+document.getElementById('stopNarBtn').onclick = () => {
+  narAudio.pause(); narAudio.currentTime = 0;
+  document.getElementById('narrationStatus').textContent = '⏹ Stopped';
+};
+
+document.getElementById('startBtn').onclick = () => {
+  narAudio.pause(); narAudio.currentTime = 0;
+  state.showClues = document.getElementById('clueToggle').checked;
+  document.getElementById('introOverlay').classList.remove('show');
+  if (preloadedSession) {
+    applySession(preloadedSession);
+  } else {
+    document.getElementById('casePicker').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    const iv = setInterval(() => {
+      if (preloadedSession) { clearInterval(iv); document.getElementById('loading').style.display='none'; applySession(preloadedSession); }
+    }, 150);
+  }
+};
+
+function applySession(data) {
+  state.sessionId = data.sessionId;
+  state.suspects = data.suspects;
+  state.questionsAsked = 0; state.hintsUsed = 0;
+  state.difficulty = data.difficulty || 'medium';
+  state.active = null; state.publicFacts = data.publicFacts || [];
+  transcripts = {}; suspectTurns = {};
+
+  // Timer
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  state.startTime = Date.now();
+  state.timerInterval = setInterval(updateTimer, 1000);
+
+  // Reset UI
+  document.getElementById('gameTitle').textContent = data.title;
+  document.getElementById('qCount').textContent = '0 questions';
+  document.getElementById('hintLeft').textContent = '3 left';
+  document.getElementById('hintBtn').disabled = false;
+  document.getElementById('clueList').innerHTML = '<li class="no-clue">No clues yet.</li>';
+  document.getElementById('who').textContent = 'Pick a suspect to question';
+  document.getElementById('transcript').innerHTML = '<p class="thinking">Choose a suspect above to start.</p>';
+  document.getElementById('starterQs').style.display = 'none';
+  document.getElementById('askInput').disabled = true;
+  document.getElementById('askBtn').disabled = true;
+  document.getElementById('micBtn').disabled = true;
+  document.getElementById('motiveInput').value = '';
+
+  // Case brief
+  document.getElementById('briefPremise').textContent = data.premise;
+  const fl = document.getElementById('briefFacts'); fl.innerHTML = '';
+  (data.publicFacts || []).forEach(f => { const li = document.createElement('li'); li.textContent = f; fl.appendChild(li); });
+  document.getElementById('briefBody').classList.remove('open');
+  document.getElementById('briefArrow').textContent = '▼';
+
+  // Clue notebook
+  document.getElementById('notebook').style.display = state.showClues ? 'flex' : 'none';
+  document.getElementById('gameBody').style.gridTemplateColumns = state.showClues ? '1fr 270px' : '1fr';
+
+  renderSuspects();
+  renderAccuseOptions();
+
+  document.getElementById('casePicker').style.display = 'none';
+  document.getElementById('gameArea').style.display = 'block';
+}
+
+function updateTimer() {
+  const s = Math.floor((Date.now() - state.startTime) / 1000);
+  const m = Math.floor(s / 60), sec = s % 60;
+  document.getElementById('timerChip').textContent = `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function resetToMenu() {
+  narAudio.pause();
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  document.getElementById('gameArea').style.display = 'none';
+  document.getElementById('verdictOverlay').classList.remove('show');
+  document.getElementById('casePicker').style.display = 'block';
+  preloadedSession = null;
+}
+document.getElementById('resetBtn').onclick = resetToMenu;
+
+// ── CASE BRIEF TOGGLE ──
+document.getElementById('briefToggle').onclick = () => {
+  const body = document.getElementById('briefBody');
+  const open = body.classList.toggle('open');
+  document.getElementById('briefArrow').textContent = open ? '▲' : '▼';
+};
+
+// ── SUSPECTS ──
+function renderSuspects() {
+  const wrap = document.getElementById('suspects');
+  wrap.innerHTML = '';
+  state.suspects.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'suspect-card';
+    card.dataset.id = s.id;
+    card.innerHTML = `<div class="num">Suspect #${i+1}</div><h3>${s.name}</h3><p>${s.role}</p><div class="sus-meter"><div class="sus-fill" id="sus-${s.id}" style="width:0%"></div></div><div class="talking-dot">● Talking…</div>`;
+    card.onclick = () => selectSuspect(s);
+    wrap.appendChild(card);
+    suspectTurns[s.id] = 0;
+  });
+}
+
+function updateSuspicionMeter(suspectId, turns) {
+  const fill = document.getElementById('sus-' + suspectId);
+  if (fill) fill.style.width = Math.min(100, turns * 14) + '%';
+}
+
+function selectSuspect(s) {
+  if (state.active) transcripts[state.active.id] = document.getElementById('transcript').innerHTML;
+  state.active = s;
+
+  document.querySelectorAll('.suspect-card').forEach(c => c.classList.toggle('active', c.dataset.id === s.id));
+  document.getElementById('who').textContent = `Questioning: ${s.name} — ${s.role}`;
+
+  const saved = transcripts[s.id];
+  document.getElementById('transcript').innerHTML = saved ||
+    `<p class="thinking">${s.name} is looking at you. Ask your first question.</p>`;
+  document.getElementById('transcript').scrollTop = 9999;
+
+  // Starter questions (only if no saved transcript)
+  if (!saved) showStarterQs(s);
+  else document.getElementById('starterQs').style.display = 'none';
+
+  document.getElementById('askInput').disabled = false;
+  document.getElementById('askBtn').disabled = false;
+  document.getElementById('micBtn').disabled = false;
+  document.getElementById('askInput').focus();
+}
+
+// ── STARTER QUESTIONS ──
+function getStarterQs(suspect) {
+  const role = suspect.role.toLowerCase();
+  const base = [
+    'Where were you when it happened?',
+    `What was your relationship with the victim?`,
+    'Did you notice anything unusual?',
+  ];
+  if (role.includes('butler') || role.includes('manager') || role.includes('assistant') || role.includes('cook'))
+    base.push('Did you see or hear anything that night?');
+  else if (role.includes('partner') || role.includes('cto') || role.includes('ceo') || role.includes('lawyer'))
+    base.push('Were there any tensions recently?');
+  else if (role.includes('son') || role.includes('niece') || role.includes('girlfriend') || role.includes('wife') || role.includes('boyfriend'))
+    base.push('When did you last speak to them?');
+  else if (role.includes('journalist') || role.includes('guest') || role.includes('customer') || role.includes('member'))
+    base.push("Is there anything you haven't told the police?");
+  else
+    base.push("Is there anything you're hiding?");
+  return base.slice(0, 3);
+}
+
+function showStarterQs(suspect) {
+  const wrap = document.getElementById('starterQs');
+  wrap.innerHTML = '';
+  getStarterQs(suspect).forEach(q => {
+    const btn = document.createElement('button');
+    btn.className = 'starter-q';
+    btn.textContent = q;
+    btn.onclick = () => {
+      document.getElementById('askInput').value = q;
+      wrap.style.display = 'none';
+      ask(q);
+    };
+    wrap.appendChild(btn);
+  });
+  wrap.style.display = 'flex';
+}
+
+// ── CHAT ──
+function addLine(cls, label, text) {
+  const t = document.getElementById('transcript');
+  t.querySelector('.thinking')?.remove();
+  const div = document.createElement('div'); div.className = `line ${cls}`;
+  div.innerHTML = `<span class="lbl">${label}</span><p>${text}</p>`;
+  t.appendChild(div); t.scrollTop = 9999;
+  return div;
+}
+
+async function ask(question) {
+  if (!question.trim() || !state.active) return;
+  const suspect = state.active;
+  document.getElementById('starterQs').style.display = 'none';
+  addLine('detective', 'You', question);
+  document.getElementById('askInput').value = '';
+  const pending = addLine('suspect', suspect.name, '…');
+  pending.querySelector('p').classList.add('thinking');
+  document.getElementById('askBtn').disabled = true;
+
+  try {
+    const res = await fetch('/api/interrogate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sessionId: state.sessionId, suspectId: suspect.id, question })
+    });
+    const data = await res.json();
+    if (data.error) { pending.querySelector('p').textContent = '(' + data.error + ')'; return; }
+
+    pending.querySelector('p').classList.remove('thinking');
+    pending.querySelector('p').textContent = data.reply;
+
+    state.questionsAsked = data.questionsAsked;
+    const qc = state.questionsAsked;
+    document.getElementById('qCount').textContent = `${qc} question${qc!==1?'s':''}`;
+
+    // Update suspicion meter
+    suspectTurns[suspect.id] = (suspectTurns[suspect.id] || 0) + 1;
+    updateSuspicionMeter(suspect.id, suspectTurns[suspect.id]);
+
+    if (state.showClues) tryAddClue(suspect.name, data.reply);
+    playVoice(data.reply, data.voiceId, suspect.id);
+  } catch(e) {
+    pending.querySelector('p').textContent = '(No response — try again.)';
+  } finally {
+    document.getElementById('askBtn').disabled = false;
+  }
+}
+
+// ── CLUES ──
+const CLUE_KW = ['was','saw','heard','found','left','went','know','told','said','never','alone','key','door','money','missing','argued','fight','lied','room','camera','email','text','message','passage','account','fund','code','footage','knife','poison','weapon','hit','print','before','after','during','didn\'t','weren\'t','wasn\'t','couldn\'t','secret','never left','last saw'];
+const NOISE = ['I think','I guess','I don\'t know','I\'m not','Well,','Look,','What?','Sorry','Excuse me','Ha.','That\'s funny'];
+
+function tryAddClue(who, text) {
+  const sents = text.match(/[^.!?]+[.!?]?/g) || [text];
+  let best = null, bestHits = 0;
+  for (const raw of sents) {
+    const s = raw.trim();
+    if (s.length < 28) continue;
+    if (NOISE.some(n => s.startsWith(n))) continue;
+    const hits = CLUE_KW.filter(k => s.toLowerCase().includes(k)).length;
+    if (hits > bestHits) { bestHits = hits; best = s; }
+  }
+  if (bestHits >= 2 && best) { addClueItem(who, best); return; }
+  const longest = sents.reduce((a,b) => b.trim().length > a.trim().length ? b : a, '').trim();
+  if (longest.length > 38 && !NOISE.some(n => longest.startsWith(n))) addClueItem(who, longest);
+}
+
+function addClueItem(who, text) {
+  const list = document.getElementById('clueList');
+  list.querySelector('.no-clue')?.remove();
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="clue-who">${who}</span>${text}`;
+  list.appendChild(li);
+  while (list.children.length > 15) list.removeChild(list.firstChild);
+}
+
+// ── VOICE ──
+async function playVoice(text, voiceId, suspectId) {
+  const card = document.querySelector(`.suspect-card[data-id="${suspectId}"]`);
+  try {
+    const res = await fetch('/api/speak', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text, voiceId })
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    audio.src = URL.createObjectURL(blob);
+    if (card) card.classList.add('talking');
+    audio.onended = () => card && card.classList.remove('talking');
+    audio.play().catch(() => card && card.classList.remove('talking'));
+  } catch(e) {}
+}
+
+// ── VOICE INPUT ──
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+if (SR) {
+  recognition = new SR();
+  recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
+  recognition.onresult = e => { const t = e.results[0][0].transcript; document.getElementById('askInput').value = t; ask(t); };
+  recognition.onend = () => document.getElementById('micBtn').classList.remove('recording');
+}
+document.getElementById('micBtn').onclick = () => {
+  if (!recognition) return;
+  const btn = document.getElementById('micBtn');
+  if (btn.classList.contains('recording')) { recognition.stop(); return; }
+  btn.classList.add('recording'); recognition.start();
+};
+document.getElementById('askBtn').onclick = () => ask(document.getElementById('askInput').value);
+document.getElementById('askInput').addEventListener('keydown', e => { if(e.key==='Enter') ask(e.target.value); });
+
+// ── HINTS ──
+document.getElementById('hintBtn').onclick = async () => {
+  const res = await fetch('/api/hint', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ sessionId: state.sessionId })
+  });
+  const data = await res.json();
+  if (data.error) { showHintToast('No hints remaining.'); document.getElementById('hintBtn').disabled = true; return; }
+  state.hintsUsed = data.hintsUsed;
+  document.getElementById('hintLeft').textContent = `${data.hintsRemaining} left`;
+  document.getElementById('hintText').textContent = data.hint;
+  document.getElementById('hintToast').classList.add('show');
+  if (data.hintsRemaining === 0) document.getElementById('hintBtn').disabled = true;
+  setTimeout(() => document.getElementById('hintToast').classList.remove('show'), 10000);
+};
+document.getElementById('hintClose').onclick = () => document.getElementById('hintToast').classList.remove('show');
+function showHintToast(msg) {
+  document.getElementById('hintText').textContent = msg;
+  document.getElementById('hintToast').classList.add('show');
+  setTimeout(() => document.getElementById('hintToast').classList.remove('show'), 4000);
+}
+
+// ── ACCUSE ──
+function renderAccuseOptions() {
+  const wrap = document.getElementById('accuseOptions'); wrap.innerHTML = '';
+  state.suspects.forEach(s => {
+    const b = document.createElement('button'); b.textContent = `It was ${s.name}`;
+    b.onclick = () => accuse(s.id); wrap.appendChild(b);
+  });
+}
+document.getElementById('accuseBtn').onclick = () => document.getElementById('accuseOverlay').classList.add('show');
+document.getElementById('cancelAccuse').onclick = () => document.getElementById('accuseOverlay').classList.remove('show');
+
+async function accuse(suspectId) {
+  const motive = document.getElementById('motiveInput').value;
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+  const res = await fetch('/api/accuse', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ sessionId: state.sessionId, suspectId, motive })
+  });
+  const r = await res.json();
+  document.getElementById('accuseOverlay').classList.remove('show');
+
+  const title = document.getElementById('verdictTitle');
+  const detail = document.getElementById('verdictDetail');
+  const scoreBox = document.getElementById('scoreBox');
+
+  if (r.correct) {
+    title.textContent = r.fullSolve ? '🎉 Perfect Solve!' : '✅ Case Closed';
+    title.className = 'verdict-correct';
+
+    const score = calcScore(r.difficulty, r.questionsAsked, r.hintsUsed, r.fullSolve);
+    const rating = getRating(score, r.difficulty);
+    saveScore(pendingCaseId, score, r.difficulty);
+
+    scoreBox.style.display = 'block';
+    document.getElementById('scoreStars').textContent = rating.stars;
+    document.getElementById('scoreNum').textContent = score.toLocaleString() + ' pts';
+    document.getElementById('scoreLabel').textContent = rating.label;
+
+    const qs = r.questionsAsked, hs = r.hintsUsed || 0;
+    detail.innerHTML = `<p><strong>Killer:</strong> ${r.killerName}</p><p><strong>Method:</strong> ${r.weapon}</p><p><strong>Motive:</strong> ${r.motive}</p><p style="margin-top:.4rem;color:var(--dim);font-size:.85rem">Solved in ${qs} question${qs!==1?'s':''}${hs?' · '+hs+' hint'+(hs!==1?'s':''):''}${r.fullSolve?' · Motive correct':''}</p>`;
+  } else {
+    title.textContent = '❌ Wrong person';
+    title.className = 'verdict-wrong';
+    scoreBox.style.display = 'none';
+    detail.innerHTML = `<p>You accused the wrong person.</p><p><strong>Real killer:</strong> ${r.killerName}</p><p><strong>Method:</strong> ${r.weapon}</p><p><strong>Motive:</strong> ${r.motive}</p><p style="margin-top:.4rem;color:var(--dim);font-size:.85rem">Keep questioning — the clues were there.</p>`;
+  }
+  document.getElementById('verdictOverlay').classList.add('show');
+}
+
+document.getElementById('playAgainBtn').onclick = () => {
+  document.getElementById('verdictOverlay').classList.remove('show');
+  showIntro(pendingCaseMeta);
+};
+document.getElementById('newCaseBtn').onclick = resetToMenu;
+
+// ── INIT ──
+loadCases();
+</script>
+</body>
+</html>
